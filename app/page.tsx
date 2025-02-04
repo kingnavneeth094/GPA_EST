@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic';
-
+import Chatbot from '@/components/Chatbot';
 const CGPAPlanner = dynamic(() => import('@/components/CGPAPlanner'), {
   ssr: false
 });
@@ -12,6 +12,7 @@ export default function Home() {
           Semester Grade Planner
         </h1>
         <CGPAPlanner />
+        <Chatbot/>
       </main>
     </div>
   );
