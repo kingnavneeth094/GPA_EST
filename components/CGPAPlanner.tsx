@@ -54,7 +54,7 @@ const emptySubject: Subject = {
 
 export default function CGPAPlanner() {
   const [semester, setSemester] = useState<number>(1);
-  const [numSubjects, setNumSubjects] = useState<number>(0);
+  const [numSubjects, setNumSubjects] = useState<number>(6);
   const [subjects, setSubjects] = useState<Subject[]>([]);
 
   const calculateInternalMarks = (subject: Subject): number => {
@@ -119,7 +119,7 @@ export default function CGPAPlanner() {
             <Input
               id="numSubjects"
               type="number"
-              min="1"
+              min="6"
               max="10"
               value={numSubjects}
               onChange={(e) => {
