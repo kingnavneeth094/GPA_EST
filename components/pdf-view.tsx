@@ -17,6 +17,7 @@ interface Subject {
   quizMarks: number;
   estimatedGrade: string;
   seeMarks: number;
+  totalInternalMarks: number; // New field for total internal marks (out of 50) for low credit courses
 }
 
 interface PDFViewProps {

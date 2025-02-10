@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calculator, GraduationCap, BookOpen, Github } from "lucide-react";
-import Link from "next/link";
 import { PDFView } from "./pdf-view";
 
 interface Subject {
@@ -28,6 +27,7 @@ interface Subject {
   quizMarks: number;
   estimatedGrade: string;
   seeMarks: number;
+  totalInternalMarks: number; // New field for total internal marks (out of 50) for low credit courses
 }
 
 const grades = [
@@ -54,6 +54,7 @@ const emptySubject: Subject = {
   quizMarks: 0,
   estimatedGrade: "B",
   seeMarks: 0,
+  totalInternalMarks: 0,
 };
 
 export default function CGPAPlanner() {
@@ -78,7 +79,7 @@ export default function CGPAPlanner() {
     const totalCredits = getTotalCredits(subject);
 
     if (totalCredits <= 2) {
-      return 0;
+      return subject.totalInternalMarks;
     }
 
     const cie1Scaled = (subject.cie1 / 40) * 20;
@@ -97,10 +98,6 @@ export default function CGPAPlanner() {
     internalMarks: number
   ): number => {
     const totalCredits = getTotalCredits(subject);
-
-    if (totalCredits <= 2) {
-      return subject.seeMarks;
-    }
 
     const grade = grades.find((g) => g.value === subject.estimatedGrade);
     if (!grade) return 0;
@@ -232,7 +229,9 @@ export default function CGPAPlanner() {
             <div className="flex items-center gap-4 mb-6">
               <GraduationCap className="w-8 h-8 text-primary" />
               <div>
-                <h2 className="text-2xl font-semibold">Subject Configuration</h2>
+                <h2 className="text-2xl font-semibold">
+                  Subject Configuration
+                </h2>
                 <p className="text-muted-foreground">
                   Enter your semester and number of subjects
                 </p>
@@ -248,7 +247,9 @@ export default function CGPAPlanner() {
                   min="1"
                   max="8"
                   value={semester}
-                  onChange={(e) => setSemester(validateInput(Number(e.target.value), 1, 8))}
+                  onChange={(e) =>
+                    setSemester(validateInput(Number(e.target.value), 1, 8))
+                  }
                   className="max-w-xs"
                   placeholder="Enter semester (1-8)"
                 />
@@ -261,7 +262,11 @@ export default function CGPAPlanner() {
                   min="6"
                   max="10"
                   value={numSubjects}
-                  onChange={(e) => handleNumSubjectsChange(validateInput(Number(e.target.value), 0, 10))}
+                  onChange={(e) =>
+                    handleNumSubjectsChange(
+                      validateInput(Number(e.target.value), 0, 10)
+                    )
+                  }
                   className="max-w-xs"
                 />
               </div>
@@ -277,11 +282,9 @@ export default function CGPAPlanner() {
                 <div className="flex items-center gap-4 mb-6">
                   <BookOpen className="w-6 h-6 text-primary" />
                   <h3 className="text-xl font-semibold">Subject {index + 1}</h3>
-                  {!isLowCreditSubject && (
-                    <span className="text-sm text-muted-foreground ml-auto">
-                      Internal Marks: {calculateInternalMarks(subject).toFixed(2)}
-                    </span>
-                  )}
+                  <span className="text-sm text-muted-foreground ml-auto">
+                    Internal Marks: {calculateInternalMarks(subject).toFixed(2)}
+                  </span>
                 </div>
 
                 <div className="grid gap-6">
@@ -290,7 +293,9 @@ export default function CGPAPlanner() {
                       <Label>Subject Name</Label>
                       <Input
                         value={subject.name}
-                        onChange={(e) => updateSubject(index, "name", e.target.value)}
+                        onChange={(e) =>
+                          updateSubject(index, "name", e.target.value)
+                        }
                         placeholder="Enter subject name"
                       />
                     </div>
@@ -303,7 +308,13 @@ export default function CGPAPlanner() {
                           min="0"
                           max="4"
                           value={subject.lectureCredits}
-                          onChange={(e) => updateSubject(index, "lectureCredits", Number(e.target.value))}
+                          onChange={(e) =>
+                            updateSubject(
+                              index,
+                              "lectureCredits",
+                              Number(e.target.value)
+                            )
+                          }
                         />
                       </div>
                       <div>
@@ -313,7 +324,13 @@ export default function CGPAPlanner() {
                           min="0"
                           max="4"
                           value={subject.tutorialCredits}
-                          onChange={(e) => updateSubject(index, "tutorialCredits", Number(e.target.value))}
+                          onChange={(e) =>
+                            updateSubject(
+                              index,
+                              "tutorialCredits",
+                              Number(e.target.value)
+                            )
+                          }
                         />
                       </div>
                       <div>
@@ -323,20 +340,32 @@ export default function CGPAPlanner() {
                           min="0"
                           max="4"
                           value={subject.practicalCredits}
-                          onChange={(e) => updateSubject(index, "practicalCredits", Number(e.target.value))}
+                          onChange={(e) =>
+                            updateSubject(
+                              index,
+                              "practicalCredits",
+                              Number(e.target.value)
+                            )
+                          }
                         />
                       </div>
                     </div>
 
                     {isLowCreditSubject ? (
                       <div>
-                        <Label>SEE Marks (out of 100)</Label>
+                        <Label>Total Internal Marks (out of 50)</Label>
                         <Input
                           type="number"
                           min="0"
-                          max="100"
-                          value={subject.seeMarks}
-                          onChange={(e) => updateSubject(index, "seeMarks", Number(e.target.value))}
+                          max="50"
+                          value={subject.totalInternalMarks}
+                          onChange={(e) =>
+                            updateSubject(
+                              index,
+                              "totalInternalMarks",
+                              Number(e.target.value)
+                            )
+                          }
                         />
                       </div>
                     ) : (
@@ -349,7 +378,13 @@ export default function CGPAPlanner() {
                               min="0"
                               max="40"
                               value={subject.cie1}
-                              onChange={(e) => updateSubject(index, "cie1", Number(e.target.value))}
+                              onChange={(e) =>
+                                updateSubject(
+                                  index,
+                                  "cie1",
+                                  Number(e.target.value)
+                                )
+                              }
                             />
                           </div>
                           <div>
@@ -359,7 +394,13 @@ export default function CGPAPlanner() {
                               min="0"
                               max="40"
                               value={subject.cie2}
-                              onChange={(e) => updateSubject(index, "cie2", Number(e.target.value))}
+                              onChange={(e) =>
+                                updateSubject(
+                                  index,
+                                  "cie2",
+                                  Number(e.target.value)
+                                )
+                              }
                             />
                           </div>
                           <div>
@@ -369,7 +410,13 @@ export default function CGPAPlanner() {
                               min="0"
                               max="40"
                               value={subject.cie3}
-                              onChange={(e) => updateSubject(index, "cie3", Number(e.target.value))}
+                              onChange={(e) =>
+                                updateSubject(
+                                  index,
+                                  "cie3",
+                                  Number(e.target.value)
+                                )
+                              }
                             />
                           </div>
                         </div>
@@ -382,7 +429,13 @@ export default function CGPAPlanner() {
                               min="0"
                               max="10"
                               value={subject.internalAssessment}
-                              onChange={(e) => updateSubject(index, "internalAssessment", Number(e.target.value))}
+                              onChange={(e) =>
+                                updateSubject(
+                                  index,
+                                  "internalAssessment",
+                                  Number(e.target.value)
+                                )
+                              }
                             />
                           </div>
                         ) : (
@@ -394,7 +447,13 @@ export default function CGPAPlanner() {
                                 min="0"
                                 max="25"
                                 value={subject.labMarks}
-                                onChange={(e) => updateSubject(index, "labMarks", Number(e.target.value))}
+                                onChange={(e) =>
+                                  updateSubject(
+                                    index,
+                                    "labMarks",
+                                    Number(e.target.value)
+                                  )
+                                }
                               />
                             </div>
                             <div>
@@ -404,7 +463,13 @@ export default function CGPAPlanner() {
                                 min="0"
                                 max="5"
                                 value={subject.quizMarks}
-                                onChange={(e) => updateSubject(index, "quizMarks", Number(e.target.value))}
+                                onChange={(e) =>
+                                  updateSubject(
+                                    index,
+                                    "quizMarks",
+                                    Number(e.target.value)
+                                  )
+                                }
                               />
                             </div>
                           </div>
@@ -416,7 +481,9 @@ export default function CGPAPlanner() {
                       <Label>Estimated Grade</Label>
                       <Select
                         value={subject.estimatedGrade}
-                        onValueChange={(value) => updateSubject(index, "estimatedGrade", value)}
+                        onValueChange={(value) =>
+                          updateSubject(index, "estimatedGrade", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -477,7 +544,6 @@ export default function CGPAPlanner() {
                         subject,
                         internalMarks
                       );
-                      const totalCredits = getTotalCredits(subject);
 
                       return (
                         <tr key={index} className="border-b">
@@ -485,9 +551,7 @@ export default function CGPAPlanner() {
                             {subject.name || `Subject ${index + 1}`}
                           </td>
                           <td className="p-2">{`${subject.lectureCredits}-${subject.tutorialCredits}-${subject.practicalCredits}`}</td>
-                          <td className="p-2">
-                            {totalCredits <= 2 ? "N/A" : internalMarks.toFixed(2)}
-                          </td>
+                          <td className="p-2">{internalMarks.toFixed(2)}</td>
                           <td className="p-2">{subject.estimatedGrade}</td>
                           <td className="p-2">{requiredExternal.toFixed(2)}</td>
                         </tr>
@@ -522,14 +586,15 @@ export default function CGPAPlanner() {
                   <Github className="w-5 h-5" />
                 </a>
                 <span className="text-sm text-muted-foreground">
-                  © {new Date().getFullYear()} CGPA Planner. All rights reserved.
+                  © {new Date().getFullYear()} CGPA Planner. All rights
+                  reserved.
                 </span>
               </div>
             </div>
             <div className="text-center mt-4">
               <p className="text-sm text-muted-foreground">
-                Developed by Navneeth K S for the students of B.M.S.C.E. For more
-                info please visit{" "}
+                Developed by Navneeth K S for the students of B.M.S.C.E. For
+                more info please visit{" "}
                 <a
                   href="https://kingnavneeth.vercel.app"
                   target="_blank"
