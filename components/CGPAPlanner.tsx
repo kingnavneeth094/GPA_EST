@@ -27,6 +27,7 @@ interface Subject {
   labMarks: number;
   quizMarks: number;
   estimatedGrade: string;
+  seeMarks: number;
 }
 
 const grades = [
@@ -52,6 +53,7 @@ const emptySubject: Subject = {
   labMarks: 0,
   quizMarks: 0,
   estimatedGrade: "B",
+  seeMarks: 0,
 };
 
 export default function CGPAPlanner() {
@@ -60,7 +62,25 @@ export default function CGPAPlanner() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [showPDF, setShowPDF] = useState(false);
 
+  const getTotalCredits = (subject: Subject): number => {
+    return (
+      subject.lectureCredits +
+      subject.tutorialCredits +
+      subject.practicalCredits
+    );
+  };
+
+  const validateInput = (value: number, min: number, max: number): number => {
+    return Math.max(min, Math.min(max, value));
+  };
+
   const calculateInternalMarks = (subject: Subject): number => {
+    const totalCredits = getTotalCredits(subject);
+
+    if (totalCredits <= 2) {
+      return 0;
+    }
+
     const cie1Scaled = (subject.cie1 / 40) * 20;
     const cie2Scaled = (subject.cie2 / 40) * 20;
     const bestCIE = cie1Scaled + cie2Scaled;
@@ -76,6 +96,12 @@ export default function CGPAPlanner() {
     subject: Subject,
     internalMarks: number
   ): number => {
+    const totalCredits = getTotalCredits(subject);
+
+    if (totalCredits <= 2) {
+      return subject.seeMarks;
+    }
+
     const grade = grades.find((g) => g.value === subject.estimatedGrade);
     if (!grade) return 0;
 
@@ -90,10 +116,7 @@ export default function CGPAPlanner() {
     let totalPoints = 0;
 
     subjects.forEach((subject) => {
-      const totalSubjectCredits =
-        subject.lectureCredits +
-        subject.tutorialCredits +
-        subject.practicalCredits;
+      const totalSubjectCredits = getTotalCredits(subject);
 
       const grade = grades.find((g) => g.value === subject.estimatedGrade);
 
@@ -112,10 +135,57 @@ export default function CGPAPlanner() {
   const updateSubject = (index: number, field: keyof Subject, value: any) => {
     setSubjects((prev) => {
       const newSubjects = [...prev];
+
+      let validatedValue = value;
+
+      // Validate numeric inputs based on their constraints
+
+      switch (field) {
+        case "lectureCredits":
+
+        case "tutorialCredits":
+
+        case "practicalCredits":
+          validatedValue = validateInput(Number(value), 0, 4);
+
+          break;
+
+        case "cie1":
+
+        case "cie2":
+
+        case "cie3":
+          validatedValue = validateInput(Number(value), 0, 40);
+
+          break;
+
+        case "internalAssessment":
+          validatedValue = validateInput(Number(value), 0, 10);
+
+          break;
+
+        case "labMarks":
+          validatedValue = validateInput(Number(value), 0, 25);
+
+          break;
+
+        case "quizMarks":
+          validatedValue = validateInput(Number(value), 0, 5);
+
+          break;
+
+        case "seeMarks":
+          validatedValue = validateInput(Number(value), 0, 100);
+
+          break;
+      }
+
       newSubjects[index] = {
         ...newSubjects[index],
-        [field]: value,
+
+        [field]: validatedValue,
       };
+
       return newSubjects;
     });
   };
@@ -128,22 +198,18 @@ export default function CGPAPlanner() {
     setNumSubjects(newNum);
 
     setSubjects((prev) => {
-      const newSubjects = [...prev];
-
-      // If increasing, add new empty subjects
-
       if (newNum > prev.length) {
         return [
           ...prev,
+
           ...Array(newNum - prev.length)
             .fill(null)
+
             .map(() => ({ ...emptySubject })),
         ];
       }
 
-      // If decreasing, remove subjects from the end
-
-      return newSubjects.slice(0, newNum);
+      return prev.slice(0, newNum);
     });
   };
 
@@ -166,9 +232,7 @@ export default function CGPAPlanner() {
             <div className="flex items-center gap-4 mb-6">
               <GraduationCap className="w-8 h-8 text-primary" />
               <div>
-                <h2 className="text-2xl font-semibold">
-                  Subject Configuration
-                </h2>
+                <h2 className="text-2xl font-semibold">Subject Configuration</h2>
                 <p className="text-muted-foreground">
                   Enter your semester and number of subjects
                 </p>
@@ -184,11 +248,7 @@ export default function CGPAPlanner() {
                   min="1"
                   max="8"
                   value={semester}
-                  onChange={(e) =>
-                    setSemester(
-                      Math.min(8, Math.max(1, Number(e.target.value)))
-                    )
-                  }
+                  onChange={(e) => setSemester(validateInput(Number(e.target.value), 1, 8))}
                   className="max-w-xs"
                   placeholder="Enter semester (1-8)"
                 />
@@ -201,188 +261,162 @@ export default function CGPAPlanner() {
                   min="6"
                   max="10"
                   value={numSubjects}
-                  onChange={(e) => {
-                    const num = Math.max(
-                      0,
-                      Math.min(10, parseInt(e.target.value) || 0)
-                    );
-                    handleNumSubjectsChange(num);
-                  }}
+                  onChange={(e) => handleNumSubjectsChange(validateInput(Number(e.target.value), 0, 10))}
                   className="max-w-xs"
                 />
               </div>
             </div>
           </Card>
 
-          {subjects.map((subject, index) => (
-            <Card key={index} className="p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <BookOpen className="w-6 h-6 text-primary" />
-                <h3 className="text-xl font-semibold">Subject {index + 1}</h3>
-                <span className="text-sm text-muted-foreground ml-auto">
-                  Internal Marks: {calculateInternalMarks(subject).toFixed(2)}
-                </span>
-              </div>
+          {subjects.map((subject, index) => {
+            const totalCredits = getTotalCredits(subject);
+            const isLowCreditSubject = totalCredits <= 2;
 
-              <div className="grid gap-6">
-                <div className="grid gap-4">
-                  <div>
-                    <Label>Subject Name</Label>
-                    <Input
-                      value={subject.name}
-                      onChange={(e) =>
-                        updateSubject(index, "name", e.target.value)
-                      }
-                      placeholder="Enter subject name"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label>Lecture Credits (L)</Label>
-                      <Input
-                        type="number"
-                        value={subject.lectureCredits}
-                        onChange={(e) =>
-                          updateSubject(
-                            index,
-                            "lectureCredits",
-                            Number(e.target.value)
-                          )
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>Tutorial Credits (T)</Label>
-                      <Input
-                        type="number"
-                        value={subject.tutorialCredits}
-                        onChange={(e) =>
-                          updateSubject(
-                            index,
-                            "tutorialCredits",
-                            Number(e.target.value)
-                          )
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>Practical Credits (P)</Label>
-                      <Input
-                        type="number"
-                        value={subject.practicalCredits}
-                        onChange={(e) =>
-                          updateSubject(
-                            index,
-                            "practicalCredits",
-                            Number(e.target.value)
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label>CIE 1 (out of 40)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="40"
-                        value={subject.cie1}
-                        onChange={(e) =>
-                          updateSubject(index, "cie1", Number(e.target.value))
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>CIE 2 (out of 40)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="40"
-                        value={subject.cie2}
-                        onChange={(e) =>
-                          updateSubject(index, "cie2", Number(e.target.value))
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>CIE 3 (out of 40)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="40"
-                        value={subject.cie3}
-                        onChange={(e) =>
-                          updateSubject(index, "cie3", Number(e.target.value))
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  {subject.practicalCredits === 0 ? (
-                    <div>
-                      <Label>Internal Assessment (10M)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={subject.internalAssessment}
-                        onChange={(e) =>
-                          updateSubject(
-                            index,
-                            "internalAssessment",
-                            Number(e.target.value)
-                          )
-                        }
-                      />
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Lab Marks (25M)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="25"
-                          value={subject.labMarks}
-                          onChange={(e) =>
-                            updateSubject(
-                              index,
-                              "labMarks",
-                              Number(e.target.value)
-                            )
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Quiz Marks (5M)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="5"
-                          value={subject.quizMarks}
-                          onChange={(e) =>
-                            updateSubject(
-                              index,
-                              "quizMarks",
-                              Number(e.target.value)
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
+            return (
+              <Card key={index} className="p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <BookOpen className="w-6 h-6 text-primary" />
+                  <h3 className="text-xl font-semibold">Subject {index + 1}</h3>
+                  {!isLowCreditSubject && (
+                    <span className="text-sm text-muted-foreground ml-auto">
+                      Internal Marks: {calculateInternalMarks(subject).toFixed(2)}
+                    </span>
                   )}
+                </div>
 
-                  <div>
+                <div className="grid gap-6">
+                  <div className="grid gap-4">
+                    <div>
+                      <Label>Subject Name</Label>
+                      <Input
+                        value={subject.name}
+                        onChange={(e) => updateSubject(index, "name", e.target.value)}
+                        placeholder="Enter subject name"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Lecture Credits (L)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="4"
+                          value={subject.lectureCredits}
+                          onChange={(e) => updateSubject(index, "lectureCredits", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Tutorial Credits (T)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="4"
+                          value={subject.tutorialCredits}
+                          onChange={(e) => updateSubject(index, "tutorialCredits", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Practical Credits (P)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="4"
+                          value={subject.practicalCredits}
+                          onChange={(e) => updateSubject(index, "practicalCredits", Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+
+                    {isLowCreditSubject ? (
+                      <div>
+                        <Label>SEE Marks (out of 100)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={subject.seeMarks}
+                          onChange={(e) => updateSubject(index, "seeMarks", Number(e.target.value))}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <Label>CIE 1 (out of 40)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="40"
+                              value={subject.cie1}
+                              onChange={(e) => updateSubject(index, "cie1", Number(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>CIE 2 (out of 40)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="40"
+                              value={subject.cie2}
+                              onChange={(e) => updateSubject(index, "cie2", Number(e.target.value))}
+                            />
+                          </div>
+                          <div>
+                            <Label>CIE 3 (out of 40)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="40"
+                              value={subject.cie3}
+                              onChange={(e) => updateSubject(index, "cie3", Number(e.target.value))}
+                            />
+                          </div>
+                        </div>
+
+                        {subject.practicalCredits === 0 ? (
+                          <div>
+                            <Label>Internal Assessment (10M)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="10"
+                              value={subject.internalAssessment}
+                              onChange={(e) => updateSubject(index, "internalAssessment", Number(e.target.value))}
+                            />
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label>Lab Marks (25M)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="25"
+                                value={subject.labMarks}
+                                onChange={(e) => updateSubject(index, "labMarks", Number(e.target.value))}
+                              />
+                            </div>
+                            <div>
+                              <Label>Quiz Marks (5M)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="5"
+                                value={subject.quizMarks}
+                                onChange={(e) => updateSubject(index, "quizMarks", Number(e.target.value))}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
                     <div>
                       <Label>Estimated Grade</Label>
                       <Select
                         value={subject.estimatedGrade}
-                        onValueChange={(value) =>
-                          updateSubject(index, "estimatedGrade", value)
-                        }
+                        onValueChange={(value) => updateSubject(index, "estimatedGrade", value)}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -398,9 +432,9 @@ export default function CGPAPlanner() {
                     </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
 
           {subjects.length > 0 && (
             <Card className="p-6">
@@ -443,6 +477,7 @@ export default function CGPAPlanner() {
                         subject,
                         internalMarks
                       );
+                      const totalCredits = getTotalCredits(subject);
 
                       return (
                         <tr key={index} className="border-b">
@@ -450,7 +485,9 @@ export default function CGPAPlanner() {
                             {subject.name || `Subject ${index + 1}`}
                           </td>
                           <td className="p-2">{`${subject.lectureCredits}-${subject.tutorialCredits}-${subject.practicalCredits}`}</td>
-                          <td className="p-2">{internalMarks.toFixed(2)}</td>
+                          <td className="p-2">
+                            {totalCredits <= 2 ? "N/A" : internalMarks.toFixed(2)}
+                          </td>
                           <td className="p-2">{subject.estimatedGrade}</td>
                           <td className="p-2">{requiredExternal.toFixed(2)}</td>
                         </tr>
@@ -485,15 +522,14 @@ export default function CGPAPlanner() {
                   <Github className="w-5 h-5" />
                 </a>
                 <span className="text-sm text-muted-foreground">
-                  © {new Date().getFullYear()} CGPA Planner. All rights
-                  reserved.
+                  © {new Date().getFullYear()} CGPA Planner. All rights reserved.
                 </span>
               </div>
             </div>
             <div className="text-center mt-4">
               <p className="text-sm text-muted-foreground">
-                Developed by Navneeth K S for the students of B.M.S.C.E. For
-                more info please visit{" "}
+                Developed by Navneeth K S for the students of B.M.S.C.E. For more
+                info please visit{" "}
                 <a
                   href="https://kingnavneeth.vercel.app"
                   target="_blank"

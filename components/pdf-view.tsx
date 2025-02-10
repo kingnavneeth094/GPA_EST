@@ -16,6 +16,7 @@ interface Subject {
   labMarks: number;
   quizMarks: number;
   estimatedGrade: string;
+  seeMarks: number;
 }
 
 interface PDFViewProps {
