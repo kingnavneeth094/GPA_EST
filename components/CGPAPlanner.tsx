@@ -84,7 +84,12 @@ export default function CGPAPlanner() {
 
     const cie1Scaled = (subject.cie1 / 40) * 20;
     const cie2Scaled = (subject.cie2 / 40) * 20;
-    const bestCIE = cie1Scaled + cie2Scaled;
+    const cie3Scaled = (subject.cie3/40) * 20;
+
+    // Calculate the best two CIE scores
+    const cieScores = [cie1Scaled, cie2Scaled, cie3Scaled];
+    cieScores.sort((a, b) => b - a); // Sort in descending order
+    const bestCIE = cieScores[0] + cieScores[1]; // Sum the best two scores
 
     if (subject.practicalCredits === 0) {
       return bestCIE + subject.internalAssessment;
